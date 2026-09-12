@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+.npmrc
+
+# Logs & OS cruft
+*.log
+npm-debug.log*
+.DS_Store
