@@ -1,10 +1,13 @@
 import express from "express";
 
-export function createApp(summarizeService) {
+export function createApp(summarizeService, websiteService) {
   if (!summarizeService?.summarize || !summarizeService?.chat) {
     throw new TypeError(
       "A summarizeService with summarize and chat is required",
     );
+  }
+  if (!websiteService?.generate) {
+    throw new TypeError("A websiteService with generate is required");
   }
   const app = express();
   app.use(express.text({ type: "*/*", limit: "100kb" }));
@@ -44,5 +47,24 @@ export function createApp(summarizeService) {
       return res.status(500).type("text/plain").send("Internal Server Error");
     }
   });
+
+  app.post("/api/website", async (req, res) => {
+    const description = typeof req.body === "string" ? req.body : "";
+    if (!description.trim()) {
+      return res
+        .status(400)
+        .type("text/plain")
+        .send("Website description is required");
+    }
+
+    try {
+      const reply = await websiteService.generate(description);
+      return res.type("text/plain").send(reply);
+    } catch (error) {
+      console.error("Failed to generate website:", error);
+      return res.status(500).type("text/plain").send("Internal Server Error");
+    }
+  });
+
   return app;
 }
