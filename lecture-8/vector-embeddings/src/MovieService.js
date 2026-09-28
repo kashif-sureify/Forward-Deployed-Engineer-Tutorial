@@ -3,6 +3,7 @@ const path = require('path');
 const MovieData = require('./model/MovieData');
 const Movie = require('./model/Movie');
 const MovieMatch = require('./model/MovieMatch');
+const embeddingCache = require('./embeddingCache');
 class MovieService {
   constructor(embeddingModel, jsonMapper) {
     this.embeddingModel = embeddingModel;
@@ -15,14 +16,21 @@ class MovieService {
 
    const inputStream = fs.readFileSync(resource, 'utf-8');
    const movieDataList = this.jsonMapper.parse(inputStream).map(movieData=> new MovieData(movieData.title, movieData.description));
+   
+   const descriptions = movieDataList.map(movieData => movieData.getDescription());
 
-   for (const movieData of movieDataList) {
-    const embedding = await this.embeddingModel.embed(movieData.getDescription());
+   let embeddings = embeddingCache.read(this.embeddingModel.model, descriptions);
 
-    const movie = new Movie(movieData.getTitle(), movieData.getDescription(), embedding);
-    this.moviesEmbedding.push(movie);
-    
+   if (embeddings) {
+    console.log(`Loaded ${embeddings.length} movie embeddings from cache (0 API requests).`);
+   } else {
+    console.log(`Embedding ${descriptions.length} movies in 1 batched request...`);
+    embeddings = await this.embeddingModel.embedBatch(descriptions);
+    embeddingCache.write(this.embeddingModel.model, descriptions, embeddings);
    }
+
+   this.moviesEmbedding = movieDataList.map((movieData, index) =>
+    new Movie(movieData.getTitle(), movieData.getDescription(), embeddings[index]));
 
   }
 

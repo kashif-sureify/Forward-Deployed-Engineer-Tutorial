@@ -17,5 +17,11 @@
     "express": "^5.2.1",
     "nodemon": "^3.1.14",
     "openai": "^7.19.0"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "js,json"
   }
 }
