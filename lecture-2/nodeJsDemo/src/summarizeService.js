@@ -41,23 +41,30 @@ Follow these rules:
   const chatAgent = createAgent({
     client,
     model,
-    instructions: `${CHAT_SYSTEM_PROMPT}\n\n${TOMATO_PROMPT}`,
+    instructions: `${CHAT_SYSTEM_PROMPT}`,
     tools: toolDefinitions,
     handlers: toolHandlers,
   });
 
   return {
-    async summarize(ticket) {
+    async *summarize(ticket, { signal } = {}) {
       if (typeof ticket !== "string" || !ticket.trim()) {
         throw new TypeError("Ticket content must be a non-empty string");
       }
-      const response = await client.responses.create({
-        model,
-        input: `Summarize this following ticket in 2 lines:\n\n${ticket}`,
-        store: false,
-      });
-
-      console.log("Raw response from the client:", response);
+      const stream = client.responses.stream(
+        {
+          model,
+          input: `Summarize this following ticket in 2 lines:\n\n${ticket}`,
+          store: false,
+        },
+        { signal },
+      );
+      for await (const event of stream) {
+        if (event.type === "response.output_text.delta") {
+          yield event.delta;
+        }
+      }
+      const response = await stream.finalResponse();
 
       const summary = response?.output_text?.trim();
       if (!summary) {
@@ -66,8 +73,8 @@ Follow these rules:
       return summary;
     },
 
-    chat(message) {
-      return chatAgent.send(message);
+    chat(message, options) {
+      return chatAgent.send(message, options);
     },
   };
 }

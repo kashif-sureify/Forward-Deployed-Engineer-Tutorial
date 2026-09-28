@@ -32,36 +32,57 @@ export function createAgent({
   maxToolRounds = DEFAULT_MAX_TOOL_ROUNDS,
   maxHistoryMessages = DEFAULT_MAX_HISTORY_MESSAGES,
 }) {
-  if (!client?.responses?.create) {
-    throw new TypeError("A client with a responses.create method is required");
+  if (!client?.responses?.stream) {
+    throw new TypeError("A client with a responses.stream method is required");
   }
 
   const history = [];
   let historyQueue = Promise.resolve();
-  function useHistory(operation) {
-    const result = historyQueue.then(operation);
-    historyQueue = result.catch(() => {}); // Prevent unhandled rejections
-    return result;
-  }
 
   return {
-    async send(message) {
+    // Yields the model's text as it is generated, including any preamble a
+    // round writes before calling a tool. The generator's return value is the
+    // final answer alone, which is also what goes into history.
+    async *send(message, { signal } = {}) {
       if (typeof message !== "string" || !message.trim()) {
         throw new TypeError("Message content must be a non-empty string");
       }
-      return useHistory(async () => {
+
+      // Hold the queue for the whole turn so two overlapping sends cannot
+      // interleave their rounds. Nothing is claimed until the caller starts
+      // iterating, and the `finally` below releases it even when the caller
+      // walks away part-way through.
+      const previousTurn = historyQueue;
+      let finishTurn;
+      historyQueue = new Promise((resolve) => {
+        finishTurn = resolve;
+      });
+      await previousTurn;
+
+      try {
         // Build the pending turn without committing it, so a failed request
         // leaves the stored history untouched.
         let input = [...history, { role: "user", content: message }];
 
         for (let round = 0; round < maxToolRounds; round += 1) {
-          const response = await client.responses.create({
-            model,
-            instructions,
-            input,
-            tools,
-            store: false,
-          });
+          const stream = client.responses.stream(
+            {
+              model,
+              instructions,
+              input,
+              tools,
+              store: false,
+            },
+            { signal },
+          );
+          for await (const event of stream) {
+            if (event.type === "response.output_text.delta") {
+              yield event.delta;
+            }
+          }
+          // The stream accumulates the events back into the same response a
+          // buffered call would have returned, so the loop below is unchanged.
+          const response = await stream.finalResponse();
 
           const toolCalls = (response?.output ?? []).filter(
             (item) => item.type === "function_call",
@@ -111,7 +132,9 @@ export function createAgent({
         throw new Error(
           `The agent did not produce a reply within ${maxToolRounds} tool rounds`,
         );
-      });
+      } finally {
+        finishTurn();
+      }
     },
   };
 }

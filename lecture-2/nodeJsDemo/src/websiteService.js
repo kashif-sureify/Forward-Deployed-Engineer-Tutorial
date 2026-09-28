@@ -94,14 +94,14 @@ export function createWebsiteService({
   return {
     workspace: websiteWorkspace,
 
-    async generate(description) {
+    async *generate(description, options) {
       if (typeof description !== "string" || !description.trim()) {
         throw new TypeError("Website description must be a non-empty string");
       }
       // Create the workspace up front so listing it works even before the
       // agent has written its first file.
       await ensureWorkspace();
-      return agent.send(description);
+      return yield* agent.send(description, options);
     },
   };
 }
