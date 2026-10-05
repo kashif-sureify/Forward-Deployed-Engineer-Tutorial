@@ -1,0 +1,53 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { createTask, listTasks, completeTask } from "./TaskTool.js";
+
+export function createMcpServer() {
+  const server = new McpServer({
+    name: process.env.MCP_SERVER_NAME || "task-mcp-server",
+    version: process.env.MCP_SERVER_VERSION || "1.0.0",
+  });
+
+  // @McpTool(name = "create_task", description = "Create a new task")
+  server.registerTool(
+    "create_task",
+    {
+      description: "Create a new task",
+      inputSchema: {
+        // @McpToolParam(description = "Title of the task", required = true)
+        title: z.string().describe("Title of the task"),
+      },
+    },
+    async ({ title }) => ({
+      content: [{ type: "text", text: createTask(title) }],
+    })
+  );
+
+  // @McpTool(name = "list_tasks", description = "List all tasks")
+  server.registerTool(
+    "list_tasks",
+    {
+      description: "List all tasks",
+    },
+    async () => ({
+      content: [{ type: "text", text: JSON.stringify(listTasks()) }],
+    })
+  );
+
+  // @McpTool(name = "complete_task", description = "Mark a task as completed")
+  server.registerTool(
+    "complete_task",
+    {
+      description: "Mark a task as completed",
+      inputSchema: {
+        // @McpToolParam(description = "Title of the task to complete", required = true)
+        title: z.string().describe("Title of the task to complete"),
+      },
+    },
+    async ({ title }) => ({
+      content: [{ type: "text", text: completeTask(title) }],
+    })
+  );
+
+  return server;
+}
