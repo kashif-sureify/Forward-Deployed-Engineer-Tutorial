@@ -2,7 +2,7 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./mcpServer.js";
 
-export const createApp = (schedulerController) => {
+export const createApp = () => {
   const app = express();
 
   app.use(express.text({ type: "*/*", limit: "10mb" }));
@@ -19,8 +19,6 @@ export const createApp = (schedulerController) => {
   app.get("/health", (req, res) => {
     res.json({ status: "ok" });
   });
-
-  app.post("/meetings", schedulerController.scheduleMeeting);
 
   // Stateless MCP endpoint: a fresh server + transport per request
   app.post("/mcp", async (req, res) => {
