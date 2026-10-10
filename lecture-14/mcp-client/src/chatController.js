@@ -18,5 +18,15 @@ export function chatController(chatService) {
     }
   });
 
+  // @GetMapping("/guidelines") - raw task://guidelines resource from the MCP server
+  router.get("/guidelines", async (req, res) => {
+    try {
+      res.type("text/plain").send(await chatService.getGuidelines());
+    } catch (err) {
+      console.error(err);
+      res.status(500).send(err.message);
+    }
+  });
+
   return router;
 }

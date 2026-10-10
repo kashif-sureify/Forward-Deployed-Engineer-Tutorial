@@ -11,5 +11,8 @@ export async function createMcpClient() {
   const { tools } = await client.listTools();
   console.log("Connected to MCP server. Tools:", tools.map((t) => t.name).join(", "));
 
+  const { resources } = await client.listResources();
+  console.log("Resources:", resources.map((r) => r.uri).join(", "));
+
   return client;
 }
