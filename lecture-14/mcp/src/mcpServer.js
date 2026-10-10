@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createTask, listTasks, completeTask } from "./TaskTool.js";
+import { getGuidelines } from "./TaskResources.js";
 
 export function createMcpServer() {
   const server = new McpServer({
@@ -46,6 +47,18 @@ export function createMcpServer() {
     },
     async ({ title }) => ({
       content: [{ type: "text", text: completeTask(title) }],
+    })
+  );
+
+  server.registerResource(
+    "task_guidelines",
+    "task://guidelines",
+    {
+      description: "Guidelines for managing and prioritizing tasks",
+      mimeType: "text/plain",
+    },
+    async (uri) => ({
+      contents: [{ uri: uri.href, mimeType: "text/plain", text: getGuidelines() }],
     })
   );
 
