@@ -39,4 +39,13 @@ ${guidelines}`;
     }
     return response.text;
   }
+
+  async getPlan(hours) {
+    const result = await this.mcpClient.getPrompt({
+      name: "plan_day",
+      arguments: { availableHours: String(hours) },
+    });
+    // The prompt only returns message text; chat() sends it to Gemini with the guidelines and task tools
+    return this.chat(result.messages[0].content.text);
+  }
 }
