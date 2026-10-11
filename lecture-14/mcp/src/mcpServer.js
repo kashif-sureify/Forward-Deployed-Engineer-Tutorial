@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createTask, listTasks, completeTask } from "./TaskTool.js";
 import { getGuidelines } from "./TaskResources.js";
+import { planDay } from "./TaskPrompts.js";
 
 export function createMcpServer() {
   const server = new McpServer({
@@ -59,6 +60,27 @@ export function createMcpServer() {
     },
     async (uri) => ({
       contents: [{ uri: uri.href, mimeType: "text/plain", text: getGuidelines() }],
+    })
+  );
+
+  // @McpPrompt(name = "plan_day", description = "Plan the day's tasks based on available hours")
+  server.registerPrompt(
+    "plan_day",
+    {
+      description: "Plan the day's tasks based on available hours",
+      argsSchema: {
+        // @McpArg(description = "Number of hours available today", required = true)
+        availableHours: z.string().describe("Number of hours available today"),
+      },
+    },
+    async ({ availableHours }) => ({
+      description: "Plan for the day's tasks based on available hours",
+      messages: [
+        {
+          role: "user",
+          content: { type: "text", text: planDay(availableHours) },
+        },
+      ],
     })
   );
 
