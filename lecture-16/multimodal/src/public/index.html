@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vision Chat</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <header class="topbar">
+      <span class="brand">Vision Chat</span>
+      <button id="clear-chat" class="ghost-button" type="button" title="Delete this conversation" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+        Clear chat
+      </button>
+    </header>
+
+    <main id="chat" class="chat" aria-live="polite">
+      <section id="empty-state" class="empty-state">
+        <h1>What can I help with?</h1>
+        <p>Ask a question, or attach an image and ask about it.</p>
+      </section>
+      <div id="messages" class="messages"></div>
+    </main>
+
+    <footer class="composer-wrap">
+      <form id="composer" class="composer">
+        <div id="preview" class="preview" hidden>
+          <img id="preview-image" alt="Selected image preview">
+          <button id="remove-image" class="remove-image" type="button" aria-label="Remove image">&times;</button>
+        </div>
+        <div class="composer-row">
+          <label class="icon-button" title="Attach image">
+            <input id="image-input" type="file" accept="image/*" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg>
+          </label>
+          <textarea id="message" rows="1" placeholder="Message the model…" autocomplete="off"></textarea>
+          <button id="send" class="send-button" type="submit" aria-label="Send" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </form>
+      <p class="hint">Enter to send · Shift+Enter for a new line · Paste or drop an image (max 10 MB)</p>
+    </footer>
+  </div>
+
+  <dialog id="lightbox" class="lightbox" aria-label="Image viewer">
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close image">&times;</button>
+    <img id="lightbox-image" alt="Enlarged image">
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>
