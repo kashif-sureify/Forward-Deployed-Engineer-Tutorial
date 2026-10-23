@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { AgentResponse } from "./models/AgentResponse.js";
 
-const resource = await readFile(
+export const resource = await readFile(
   new URL("resource/systemPrompt.txt", import.meta.url),
   "utf-8",
 );

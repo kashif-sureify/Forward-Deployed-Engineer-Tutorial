@@ -1,12 +1,20 @@
 {
-  "name": "ai-evals",
+  "name": "@sureify/ai-evals",
   "version": "1.0.0",
   "description": "",
-  "main": "src/main/server.js",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./server": "./src/main/server.js"
+  },
+  "files": [
+    "src/"
+  ],
   "scripts": {
     "test": "node --test",
     "start": "node src/main/server.js",
-    "dev": "nodemon src/main/server.js"
+    "dev": "nodemon src/main/server.js",
+    "eval": "node --test src/test/SupportAgentEvalTest.js"
   },
   "keywords": [],
   "author": "",

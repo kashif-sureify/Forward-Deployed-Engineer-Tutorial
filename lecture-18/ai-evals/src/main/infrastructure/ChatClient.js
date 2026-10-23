@@ -1,6 +1,16 @@
 const useGemini = () =>
   !process.env.OPENAI_API_KEY && !!process.env.GEMINI_API_KEY;
 
+
+const responseFormat = (json) =>
+  json === true ? { type: "json_object" } : {
+    type: "json_schema", json_schema: {
+      name: "response",
+      strict: true,
+      schema: json
+    }
+  };
+
 export class ChatClient {
   constructor({
     apiKey = useGemini()
@@ -69,7 +79,7 @@ export class ChatClient {
       model: this.model,
       messages,
       ...(tools ? { tools } : {}),
-      ...(json ? { response_format: { type: "json_object" } } : {}),
+      ...(json ? { response_format: responseFormat(json) } : {}),
     });
     return response.choices?.[0]?.message ?? null;
   }
