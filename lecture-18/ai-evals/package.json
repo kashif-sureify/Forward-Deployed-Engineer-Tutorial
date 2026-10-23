@@ -11,7 +11,7 @@
     "src/"
   ],
   "scripts": {
-    "test": "node --test",
+    "test": "node --test src/test/TestingDemoApplicationTests.js",
     "start": "node src/main/server.js",
     "dev": "nodemon src/main/server.js",
     "eval": "node --test src/test/SupportAgentEvalTest.js"
