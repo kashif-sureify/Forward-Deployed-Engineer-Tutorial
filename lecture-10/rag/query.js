@@ -53,7 +53,18 @@ async function chattingWithAI(question) {
         includeMetadata: true
     });
 
-    const context = searchResults.matches
+    // Pinecone has no score threshold option, so drop weak matches here.
+    // With the cosine metric, score is similarity: higher means more relevant.
+    const SIMILARITY_THRESHOLD = 0.7;
+    const relevantMatches = searchResults.matches
+                   .filter(match => match.score >= SIMILARITY_THRESHOLD);
+
+    if (relevantMatches.length === 0) {
+        console.log("No relevant matches found.");
+        return "No relevant matches found.";
+    }
+
+    const context = relevantMatches
                    .map(match => match.metadata.text)
                    .join("\n\n---\n\n");
 

@@ -4,7 +4,9 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import * as dotenv from 'dotenv';
 import { PineconeStore } from '@langchain/pinecone';
+import { Document } from '@langchain/core/documents';
 
+const PDF_SOURCE = './hld.pdf';
 
 dotenv.config();
 
@@ -60,6 +62,111 @@ for (let i = 0; i < chunkDocs.length; i += BATCH_SIZE) {
     }
 }
 console.log("Indexed documents into Pinecone.");
+}
+
+// ---------------------------------------------------------------------------
+// Alternative chunking strategies (reference only, not used by indexDocuments)
+// ---------------------------------------------------------------------------
+
+// Structured chunking: split along the document's own structure (headings /
+// sections) so each chunk is one logical section. Sections that are still too
+// big are sub-split with the recursive splitter, and every chunk keeps its
+// section heading in metadata so it can be shown or filtered on at query time.
+async function structuredChunking(rawDocs, maxChunkSize = 1000) {
+    // PDF text has no markdown, so treat numbered lines ("1.", "2.3 Title")
+    // and short ALL-CAPS lines as headings.
+    const headingRegex = /^(\d+(\.\d+)*\.?\s+\S.*|[A-Z][A-Z0-9 &/-]{3,60})$/;
+
+    const sections = [];
+    let current = { heading: 'Introduction', lines: [], page: 1 };
+
+    for (const doc of rawDocs) {
+        const page = doc.metadata?.loc?.pageNumber;
+        for (const line of doc.pageContent.split('\n')) {
+            const trimmed = line.trim();
+            if (headingRegex.test(trimmed)) {
+                if (current.lines.length) sections.push(current);
+                current = { heading: trimmed, lines: [], page };
+            } else if (trimmed) {
+                current.lines.push(trimmed);
+            }
+        }
+    }
+    if (current.lines.length) sections.push(current);
+
+    const subSplitter = new RecursiveCharacterTextSplitter({
+        chunkSize: maxChunkSize,
+        chunkOverlap: 100,
+    });
+
+    const chunks = [];
+    for (const section of sections) {
+        const text = `${section.heading}\n${section.lines.join(' ')}`;
+        const metadata = { source: PDF_SOURCE, section: section.heading, page: section.page };
+        if (text.length <= maxChunkSize) {
+            chunks.push(new Document({ pageContent: text, metadata }));
+        } else {
+            // Prefix the heading on every sub-chunk so it keeps its context.
+            const parts = await subSplitter.splitText(section.lines.join(' '));
+            parts.forEach((part, idx) => chunks.push(new Document({
+                pageContent: `${section.heading}\n${part}`,
+                metadata: { ...metadata, part: idx + 1 },
+            })));
+        }
+    }
+    return chunks;
+}
+
+// Semantic chunking: split into sentences, embed each one, and start a new
+// chunk wherever the meaning shifts, i.e. where the cosine distance between
+// neighbouring sentences is in the top (100 - percentile)% of all distances.
+// Note: this embeds every sentence, so it costs far more embedding calls than
+// the other splitters (watch the Gemini rate limit).
+async function semanticChunking(rawDocs, embeddings, { percentile = 95, bufferSize = 1 } = {}) {
+    const fullText = rawDocs.map((d) => d.pageContent).join(' ').replace(/\s+/g, ' ');
+    const sentences = fullText.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? [];
+    if (sentences.length < 2) {
+        return [new Document({ pageContent: fullText, metadata: { source: PDF_SOURCE } })];
+    }
+
+    // Embed each sentence together with its neighbours to smooth out noise.
+    const windows = sentences.map((_, i) =>
+        sentences.slice(Math.max(0, i - bufferSize), i + bufferSize + 1).join(' ')
+    );
+    const vectors = await embeddings.embedDocuments(windows);
+
+    const cosineDistance = (a, b) => {
+        let dot = 0, normA = 0, normB = 0;
+        for (let k = 0; k < a.length; k++) {
+            dot += a[k] * b[k];
+            normA += a[k] * a[k];
+            normB += b[k] * b[k];
+        }
+        return 1 - dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    };
+
+    const distances = [];
+    for (let i = 0; i < vectors.length - 1; i++) {
+        distances.push(cosineDistance(vectors[i], vectors[i + 1]));
+    }
+
+    const sorted = [...distances].sort((a, b) => a - b);
+    const threshold = sorted[Math.floor((percentile / 100) * (sorted.length - 1))];
+
+    const chunks = [];
+    let start = 0;
+    distances.forEach((distance, i) => {
+        if (distance > threshold) {
+            chunks.push(sentences.slice(start, i + 1).join(' '));
+            start = i + 1;
+        }
+    });
+    chunks.push(sentences.slice(start).join(' '));
+
+    return chunks.map((text, idx) => new Document({
+        pageContent: text,
+        metadata: { source: PDF_SOURCE, chunk: idx + 1 },
+    }));
 }
 
 indexDocuments();
