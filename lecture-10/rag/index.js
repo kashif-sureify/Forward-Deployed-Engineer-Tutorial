@@ -32,7 +32,7 @@ console.log("Split documents into chunks:", chunkDocs.length);
 const embeddings = new GoogleGenerativeAIEmbeddings({
     apiKey: process.env.GEMINI_API_KEY,
     model: process.env.GEMINI_MODEL,
-    outputDimensionality: 1024 // must match the Pinecone index dimension
+    outputDimensionality: 1024
 });
 
 console.log("Initialized embeddings.");
