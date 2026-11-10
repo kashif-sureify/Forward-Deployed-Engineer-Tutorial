@@ -1,0 +1,6 @@
+Question: What is the selection problem described in the chapter?
+Answer: Based on the provided text, the selection problem is the problem of determining the $k\text{th}$ largest number from a group of $N$ numbers.
+
+Question: According to the text, if a prime number N divides a product ab, what must be true about a and b?
+Answer: According to the text, if a prime number $N$ divides a product of two numbers ($ab \equiv 0 \pmod N$), then it divides at least one of the two numbers ($a \equiv 0 \pmod N$ or $b \equiv 0 \pmod N$).
+
