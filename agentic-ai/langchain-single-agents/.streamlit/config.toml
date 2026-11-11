@@ -1,0 +1,7 @@
+# Separate light and dark palettes. A plain [theme] section would lock the app
+# into a single custom theme and disable light/dark/system switching.
+[theme.light]
+primaryColor = "#6366f1"
+
+[theme.dark]
+primaryColor = "#818cf8"
